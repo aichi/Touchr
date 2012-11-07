@@ -1,5 +1,5 @@
 (function(window) {
-	var document = window.document,
+    var document = window.document,
 		createTouchEvent = function (eventName, target, params) {
 			var k,
 				event = document.createEvent('Event');
@@ -68,7 +68,7 @@
 				return Object.create(Array.prototype, methods);
 			};
 		})(),
-	    // methods passed to TouchList closure method to extend Array
+    	// methods passed to TouchList closure method to extend Array
 		touchListMethods = {
 			/**
 			 * Returns touch by id. This method fulfill the TouchList interface.
@@ -130,10 +130,9 @@
 			 */
 			_add: {
 				value: function(event) {
-					var index = this._touchIndex(event),
-						id = event.pointerId;
+					var index = this._touchIndex(event);
 
-					index = index < 0 ? this.length - 1 : index;
+					index = index < 0 ? this.length : index;
 
 					//normalizing Pointer to Touch
 					event.type = "MSPointerMove";
@@ -154,8 +153,7 @@
 			 */
 			_remove: {
 				value: function(event) {
-					var id = event.pointerId,
-						index = this._touchIndex(event);
+					var index = this._touchIndex(event);
 
 					if (index >= 0) {
 						this.splice(index,1);
@@ -194,6 +192,14 @@
 		 * @type Object
 		 */
 		pointerToTarget = {},
+		
+		/**
+		 * Storage of targets and anonymous MSPointerStart handlers for later
+		 * unregistering		 
+		 * @type Array
+		 */
+		attachedPointerStartMethods = [],
+		
 		/**
 		 * Checks if node is some of parent children or sub-children
 		 * @param {HTMLElement|Document} parent
@@ -220,6 +226,7 @@
 		pointerListener = function (evt) {
 			var type,
 				target = evt.target,
+				originalTarget,
 				changedTouches,
 				targetTouches;
 
@@ -245,18 +252,25 @@
 			//are in this array even if these touches have coordinates outside target elements
 			targetTouches = document.createTouchList();
 			for (var i = 0; i < generalTouchesHolder.length; i++) {
-				targetTouches._add(generalTouchesHolder[i]);
+				//targetTouches._add(generalTouchesHolder[i]);
+				//check if the pointerTarget is in the target
+				if (checkSameTarget(target, pointerToTarget[generalTouchesHolder[i].identifier])) {
+					targetTouches._add(generalTouchesHolder[i]);
+				}
 			}
+			originalTarget = pointerToTarget[evt.pointerId];
 
 			if (evt.type === "MSPointerUp") {
 				generalTouchesHolder._remove(evt);
-				pointerToTarget[evt.ponterId] = null;
+				pointerToTarget[evt.pointerId] = null;
 
-				delete pointerToTarget[evt.ponterId];
+				delete pointerToTarget[evt.pointerId];
 				type = "touchend";
 			}
-
-			createTouchEvent(type, target, {touches: generalTouchesHolder, changedTouches: changedTouches, targetTouches: targetTouches});
+//log("+", evt.type, generalTouchesHolder.length, evt.target.nodeName+"#"+evt.target.id);
+			if (type && originalTarget) {
+				createTouchEvent(type, originalTarget, {touches: generalTouchesHolder, changedTouches: changedTouches, targetTouches: targetTouches});
+			}
 		},
 		/**
 		 * This method augments event listener methods on given class to call
@@ -279,7 +293,7 @@
 			elementClass.prototype.removeEventListener = function(type, listener, useCapture) {
 				window.navigator.msPointerEnabled && customRemoveEventListener.call(this, type, listener, useCapture);
 				oldRemoveEventListener.call(this, type, listener, useCapture);
-			}
+			};
 		},
 		/**
 		 * This method attach event handler for MSPointer events when user
@@ -289,18 +303,27 @@
 		 * @param {Boolean} useCapture
 		 */
 		attachTouchEvents = function (type, listener, useCapture) {
-			//todo store this,type,listener, to know what to call in pointerListener
+			var that = this,
+				func;
+				
 			if (type.indexOf("touchstart") === 0) {
-				this.addEventListener("MSPointerDown", pointerListener, useCapture);
+				func = function() {
+					if (checkSameTarget(that, arguments[0].target)) {
+						pointerListener.apply(this, arguments);
+					}
+				};
+				attachedPointerStartMethods.push({node: this, func: func});
+				this.ownerDocument.addEventListener("MSPointerDown", func, useCapture);
 			}
 			if (type.indexOf("touchmove") === 0) {
-				this.addEventListener("MSPointerMove", pointerListener, useCapture);
+				this.ownerDocument.addEventListener("MSPointerMove", pointerListener, useCapture);
 			}
 			if (type.indexOf("touchend") === 0) {
-				this.addEventListener("MSPointerUp", pointerListener, useCapture);
+				this.ownerDocument.addEventListener("MSPointerUp", pointerListener, useCapture);
 			}
 
-			if (typeof this.style.msTouchAction != 'undefined')
+			// e.g. Document has no style
+			if (this.style && typeof this.style.msTouchAction != 'undefined')
 				this.style.msTouchAction = "none";
 		},
 		/**
@@ -311,15 +334,24 @@
 		 * @param {Boolean} useCapture
 		 */
 		removeTouchEvents = function (type, listener, useCapture) {
+			var func,
+				i;
 			//todo store this,type,listener, to know what to call in pointerListener
 			if (type.indexOf("touchstart") === 0) {
-				this.removeEventListener("MSPointerDown", pointerListener, useCapture);
+			    i = attachedPointerStartMethods.length;
+				while(i--) {
+					if (attachedPointerStartMethods[i].node === this) {
+						this.ownerDocument.removeEventListener("MSPointerDown", func, useCapture);
+						attachedPointerStartMethods.splice(i, 1);
+						break;
+					}
+				}
 			}
 			if (type.indexOf("touchmove") === 0) {
-				this.removeEventListener("MSPointerMove", pointerListener, useCapture);
+				this.ownerDocument.removeEventListener("MSPointerMove", pointerListener, useCapture);
 			}
 			if (type.indexOf("touchend") === 0) {
-				this.removeEventListener("MSPointerUp", pointerListener, useCapture);
+				this.ownerDocument.removeEventListener("MSPointerUp", pointerListener, useCapture);
 			}
 		};
 
@@ -347,9 +379,15 @@
 	};
 
 	/**
-	 * AbstractView view, EventTarget target, long identifier, long pageX, long pageY, long screenX, long screenY
-	 *
-	 * AbstractView neco jako document.defaultView === window
+	 * AbstractView is class for document.defaultView === window	
+	 * @param {AbstractView} view 
+	 * @param {EventTarget} target
+	 * @param {Number} identifier
+	 * @param {Number} pageX
+	 * @param {Number} pageY
+	 * @param {Number} screenX
+	 * @param {Number} screenY
+	 * @return {Touch}
 	 */
 	document.createTouch = function(view, target, identifier, pageX, pageY, screenX, screenY) {
 		return {
@@ -361,15 +399,8 @@
 			pageX: pageX,
 			pageY: pageY,
 			target: target
-		}
+		};
 	};
-
-
-
-
-
-
-
 
 
 	generalTouchesHolder = document.createTouchList();
