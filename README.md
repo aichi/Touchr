@@ -1,15 +1,15 @@
 Toucher
 =======
 
-The core idea of Toucher is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10. This package automatically mimics touch events in IE10 browser.
+The core idea of Toucher is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10. This package automatically mimics touch events in IE10 browser. Intro page is available on http://aichi.github.com/toucher.
 
 Usage:
 
-<script type="text/javascript" src="js/touch.js"></script>
+`<script type="text/javascript" src="js/touch.js"></script>`
 
 Interaction:
 
-element.addEventListener("touchstart", function(e){console.log(e)});
+`element.addEventListener("touchstart", function(e){console.log(e)});`
 
 Licence:
 
