@@ -7,7 +7,7 @@ Usage:
 
 Load the Toucher before all other scripts are loaded and executed:
 
-<!--[if gte IE 10]><script type="text/javascript" src="js/touch.js"></script><![endif]-->
+`<!--[if gte IE 10]><script type="text/javascript" src="js/touch.js"></script><![endif]-->`
 
 Interaction:
 
