@@ -34,7 +34,7 @@
 
 <h2>Usage:</h2>
 
-<p><code>&lt;script type="text/javascript" src="js/touch.js"&gt;&lt;/script&gt;</code></p>
+<p><code>&lt;!--[if gte IE 10]&gt;&lt;script type="text/javascript" src="js/touch.js"&gt;&lt;/script&gt;&lt;![endif]--&gt;</code></p>
 
 <h2>Interaction:</h2>
 
@@ -50,6 +50,16 @@
       </footer>
     </div>
     <script src="javascripts/scale.fix.js"></script>
-    
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-86831-11");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
   </body>
 </html>
