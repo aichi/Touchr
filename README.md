@@ -1,13 +1,13 @@
-Toucher
+Touchr
 =======
 
-The core idea of Toucher is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10. This package automatically mimics touch events in IE10 browser. Intro page is available on http://aichi.github.com/toucher.
+The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10. This package automatically mimics touch events in IE10 browser. Intro page is available on http://aichi.github.com/Touchr.
 
 Usage:
 
-Load the Toucher before all other scripts are loaded and executed:
+Load the Touchr before all other scripts are loaded and executed:
 
-`<!--[if gte IE 10]><script type="text/javascript" src="js/touch.js"></script><![endif]-->`
+`<!--[if gte IE 10]><script type="text/javascript" src="js/touchr.js"></script><![endif]-->`
 
 Interaction:
 
@@ -17,4 +17,4 @@ Use touch handler as you are used to:
 
 Licence:
 
-Toucher is distributed under terms of MIT licence.
+Touchr is distributed under terms of MIT licence.
