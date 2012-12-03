@@ -378,6 +378,8 @@
 		return touchList;
 	};
 
+	/*******  Fakes which persuade other code to use touch events ********/
+
 	/**
 	 * AbstractView is class for document.defaultView === window	
 	 * @param {AbstractView} view 
@@ -401,16 +403,15 @@
 			target: target
 		};
 	};
+	//Fake Modernizer touch test
+	//http://modernizr.github.com/Modernizr/touch.html
+	if (!window.ontouchstart) window.ontouchstart = 1;
 
+	/*******  End of fakes ***********************************/
 
 	generalTouchesHolder = document.createTouchList();
-
-
 
 	// Overriding HTMLElement and HTMLDocument to hand over touch handler to MSPointer event handler
 	augmentEventListener(HTMLElement);
 	augmentEventListener(Document);
 }(window));
-
-//TODO: fake tests for modernizer?
-//http://modernizr.github.com/Modernizr/touch.html
