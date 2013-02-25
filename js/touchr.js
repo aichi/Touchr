@@ -1,8 +1,8 @@
 (function(window) {
-    var document = window.document,
-		createTouchEvent = function (eventName, target, params) {
+	var document = window.document,
+		createEvent = function (eventName, target, params) {
 			var k,
-				event = document.createEvent('Event');
+				event = document.createEvent("Event");
 
 			event.initEvent(eventName, true, true);
 			for (k in params) {
@@ -68,11 +68,11 @@
 				return Object.create(Array.prototype, methods);
 			};
 		})(),
-    	// methods passed to TouchList closure method to extend Array
+		// methods passed to TouchList closure method to extend Array
 		touchListMethods = {
 			/**
 			 * Returns touch by id. This method fulfill the TouchList interface.
-			 * @params {Number} id
+			 * @param {Number} id
 			 * @returns {Touch}
 			 */
 			identifiedTouch: {
@@ -86,7 +86,7 @@
 			},
 			/**
 			 * Returns touch by index. This method fulfill the TouchList interface.
-			 * @params {Number} index
+			 * @param {Number} index
 			 * @returns {Touch}
 			 */
 			item: {
@@ -96,7 +96,7 @@
 			},
 			/**
 			 * Returns touch index
-			 * @params {Touch} touch
+			 * @param {Touch} touch
 			 * @returns {Number}
 			 */
 			_touchIndex: {
@@ -111,7 +111,7 @@
 
 			/**
 			 * Add all events and convert them to touches
-			 * @params {Event[]} events
+			 * @param {Event[]} events
 			 */
 			_addAll: {
 				value: function(events) {
@@ -126,7 +126,7 @@
 
 			/**
 			 * Add and MSPointer event and convert it to Touch like object
-			 * @params {Event} event
+			 * @param {Event} event
 			 */
 			_add: {
 				value: function(event) {
@@ -149,7 +149,7 @@
 
 			/**
 			 * Removes an event from this touch list.
-			 * @params {Event} event
+			 * @param {Event} event
 			 */
 			_remove: {
 				value: function(event) {
@@ -182,16 +182,23 @@
 				return arr;
 			};
 		})(touchListMethods),
+		
 		/**
 		 * list of all touches running during life cycle
 		 * @type TouchList
 		 */
 		generalTouchesHolder,
+		
 		/**
 		 * Storage of link between pointer {id} and original target
 		 * @type Object
 		 */
 		pointerToTarget = {},
+		
+		/**
+		 * General gesture object which fires MSGesture events whenever any associated MSPointer event changed. 
+		 */
+		gesture = window.MSGesture ? new MSGesture() : null,
 		
 		/**
 		 * Storage of targets and anonymous MSPointerStart handlers for later
@@ -218,8 +225,9 @@
 				return false;
 			}
 		},
+		
 		/**
-		 * Main function which is rewriting the touch event to MSPointer event
+		 * Main function which is rewriting the MSPointer event to touch event
 		 * and preparing all the necessary lists of touches.
 		 * @param {Event} evt
 		 */
@@ -235,6 +243,15 @@
 				pointerToTarget[evt.pointerId] = evt.target;
 
 				type = "touchstart";
+				
+				// Fires MSGesture event when we have at least two pointers in our holder 
+				// (adding pointers to gesture object immediately fires Gesture event)
+				if (generalTouchesHolder.length > 1) {
+					gesture.target = evt.target;
+					for (var i = 0; i < generalTouchesHolder.length; i++) {
+						gesture.addPointer(generalTouchesHolder[i].pointerId);
+					}
+				}
 			}
 
 			if (evt.type === "MSPointerMove" && generalTouchesHolder.identifiedTouch(evt.pointerId)) {
@@ -266,12 +283,31 @@
 
 				delete pointerToTarget[evt.pointerId];
 				type = "touchend";
+				
+				// Fires MSGestureEnd event when there is only one ore zero touches:
+				if (generalTouchesHolder.length <= 1) {
+					gesture.stop();
+				}
 			}
 //log("+", evt.type, generalTouchesHolder.length, evt.target.nodeName+"#"+evt.target.id);
 			if (type && originalTarget) {
-				createTouchEvent(type, originalTarget, {touches: generalTouchesHolder, changedTouches: changedTouches, targetTouches: targetTouches});
+				createEvent(type, originalTarget, {touches: generalTouchesHolder, changedTouches: changedTouches, targetTouches: targetTouches});
 			}
 		},
+		
+		/**
+		 * Main function which is rewriting the MSGesture event to gesture event.
+		 * @param {Event} evt
+		 */
+		gestureListener = function (evt) {
+			var type;
+			if (evt.type === "MSGestureStart") {type = "gesturestart"}
+			else if (evt.type === "MSGestureChange") {type = "gesturechange"}
+			else if (evt.type === "MSGestureEnd") {type = "gestureend"}
+			
+			createEvent(type, evt.target, {scale: evt.scale, rotation: evt.rotation, screenX: evt.screenX, screenY: evt.screenY});
+		},
+		
 		/**
 		 * This method augments event listener methods on given class to call
 		 * our own method which attach/detach the MSPointer events handlers
@@ -285,7 +321,7 @@
 				oldRemoveEventListener = elementClass.prototype.removeEventListener;
 
 			elementClass.prototype.addEventListener = function(type, listener, useCapture) {
-				//this je element, uchovat
+				//"this" is HTML element
 				window.navigator.msPointerEnabled && customAddEventListener.call(this, type, listener, useCapture);
 				oldAddEventListener.call(this, type, listener, useCapture);
 			};
@@ -296,8 +332,8 @@
 			};
 		},
 		/**
-		 * This method attach event handler for MSPointer events when user
-		 * tries to attach touch events.
+		 * This method attach event handler for MSPointer / MSGesture events when user
+		 * tries to attach touch / gesture events.
 		 * @param {String} type
 		 * @param {Function} listener
 		 * @param {Boolean} useCapture
@@ -321,14 +357,24 @@
 			if (type.indexOf("touchend") === 0) {
 				this.ownerDocument.addEventListener("MSPointerUp", pointerListener, useCapture);
 			}
+			if (type.indexOf("gesturestart") === 0) {
+				this.ownerDocument.addEventListener("MSGestureStart", gestureListener, useCapture);
+			}
+			if (type.indexOf("gesturechange") === 0) {
+				this.ownerDocument.addEventListener("MSGestureChange", gestureListener, useCapture);
+			}
+			if (type.indexOf("gestureend") === 0) {
+				this.ownerDocument.addEventListener("MSGestureEnd", gestureListener, useCapture);
+			}
 
 			// e.g. Document has no style
-			if (this.style && typeof this.style.msTouchAction != 'undefined')
+			if (this.style && typeof this.style.msTouchAction != "undefined") {
 				this.style.msTouchAction = "none";
+			}
 		},
 		/**
-		 * This method detach event handler for MSPointer events when user
-		 * tries to detach touch events.
+		 * This method detach event handler for MSPointer / MSGesture events when user
+		 * tries to detach touch / gesture events.
 		 * @param {String} type
 		 * @param {Function} listener
 		 * @param {Boolean} useCapture
@@ -338,7 +384,7 @@
 				i;
 			//todo store this,type,listener, to know what to call in pointerListener
 			if (type.indexOf("touchstart") === 0) {
-			    i = attachedPointerStartMethods.length;
+				i = attachedPointerStartMethods.length;
 				while(i--) {
 					if (attachedPointerStartMethods[i].node === this) {
 						this.ownerDocument.removeEventListener("MSPointerDown", func, useCapture);
@@ -352,6 +398,15 @@
 			}
 			if (type.indexOf("touchend") === 0) {
 				this.ownerDocument.removeEventListener("MSPointerUp", pointerListener, useCapture);
+			}
+			if (type.indexOf("gesturestart") === 0) {
+				this.ownerDocument.removeEventListener("MSGestureStart", gestureListener, useCapture);
+			}
+			if (type.indexOf("gesturechange") === 0) {
+				this.ownerDocument.removeEventListener("MSGestureChange", gestureListener, useCapture);
+			}
+			if (type.indexOf("gestureend") === 0) {
+				this.ownerDocument.removeEventListener("MSGestureEnd", gestureListener, useCapture);
 			}
 		};
 
