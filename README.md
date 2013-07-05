@@ -7,7 +7,9 @@ Usage:
 
 Load the Touchr before all other scripts are loaded and executed:
 
-`<!--[if gte IE 10]><script type="text/javascript" src="js/touchr.js"></script><![endif]-->`
+`<script type="text/javascript" src="js/touchr.js"></script>`
+
+You can sniff IE and load this script for IE 10+ only if necessary.
 
 Interaction:
 
