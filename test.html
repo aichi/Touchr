@@ -5,6 +5,9 @@
 		<meta name="robots" content="index,follow" />
 		<title>T</title>
 		<script type="text/javascript" src="js/touchr.js"></script>
+		
+		<!-- Modernizr.touch should be true -->
+		<!-- script type="text/javascript" src="http://modernizr.com/downloads/modernizr-latest.js"></script-->
 		<style type="text/css">
 		html {
 			overflow: hidden;
@@ -75,15 +78,16 @@
 
 		<script type="text/javascript">
 			function listener(e) {
+				var len = e.touches ? e.touches.length : 0;
 				log(
 					e.type, 
-					e.touches.length, 
-					e.changedTouches.length,
+					len ? len : 0, 
+					e.changedTouches ? e.changedTouches.length : "-",
 					e.target.nodeName+"#"+e.target.id, 
-					e.touches.length > 0 ? e.touches[0].screenX : "-", 
-					e.touches.length > 0 ? e.touches[0].screenY : "-",
-					e.touches.length > 1 ? e.touches[1].screenX : "-", 
-					e.touches.length > 1 ? e.touches[1].screenY : "-"
+					len > 0 ? e.touches[0].screenX : "-", 
+					len > 0 ? e.touches[0].screenY : "-",
+					len > 1 ? e.touches[1].screenX : "-", 
+					len > 1 ? e.touches[1].screenY : "-"
 				);
 			}
 
@@ -95,6 +99,10 @@
 			elm.addEventListener("touchstart", listener, false);
 			elm.addEventListener("touchmove", listener, false);
 			elm.addEventListener("touchend", listener, false);
+			
+			elm.addEventListener("gesturestart", listener, false);
+			elm.addEventListener("gesturechange", listener, false);
+			elm.addEventListener("gestureend", listener, false);
 		</script>
 	</body>
 </html>
