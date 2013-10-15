@@ -1,7 +1,7 @@
 Touchr
 =======
 
-The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10. This package automatically mimics touch events in IE10 browser. Intro page is available on http://aichi.github.com/Touchr.
+The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10 and newer. This package automatically mimics touch events in these browsers. Intro page is available on http://aichi.github.com/Touchr.
 
 Usage:
 
