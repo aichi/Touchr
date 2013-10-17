@@ -7,13 +7,13 @@
 	// Only pointer enabled browsers without touch capability.
 	if (IE_10 || (IE_11_PLUS && !('ontouchstart' in window))) {
 		var document = window.document,
-			POINTER_DOWN	= IE_10 ? "MSPointerDown" : "pointerdown",
-			POINTER_UP 		= IE_10 ? "MSPointerUp" : "pointerup",
-			POINTER_MOVE	= IE_10 ? "MSPointerMove" : "pointermove",
+			POINTER_DOWN	= IE_11_PLUS ? "pointerdown" : "MSPointerDown",
+			POINTER_UP 		= IE_11_PLUS ? "pointerup" : "MSPointerUp",
+			POINTER_MOVE	= IE_11_PLUS ? "pointermove" : "MSPointerMove",
 			GESTURE_START	= "MSGestureStart",
 			GESTURE_CHANGE	= "MSGestureChange",
 			GESTURE_END		= "MSGestureEnd",
-			TOUCH_ACTION	= IE_10 ? "msTouchAction" : "touchAction",
+			TOUCH_ACTION	= IE_11_PLUS ? "touchAction" : "msTouchAction",
 			createEvent = function (eventName, target, params) {
 				var k,
 					event = document.createEvent("Event");
