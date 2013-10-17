@@ -11,12 +11,13 @@
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+    <script src="./javascripts/touchr.js"></script>
   </head>
   <body>
     <div class="wrapper">
       <header>
         <h1>Touchr</h1>
-        <p>Mimics touch events for Internet Explorer 10 browser</p>
+        <p>Mimics touch events for Internet Explorer 10+ browser</p>
 
         <p class="view"><a href="https://github.com/aichi/Touchr">View the Project on GitHub <small>aichi/Touchr</small></a></p>
 
@@ -30,19 +31,91 @@
       <section>
         <h1>Touchr</h1>
 
-<p>The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10. This package automatically mimics touch events in IE10 browser.</p>
+        <p>The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10+ pointer gestures. This package automatically mimics touch events in IE 10+ browser.</p>
 
-<h2>Usage:</h2>
+        <h2>Usage:</h2>
 
-<p><code>&lt;script type="text/javascript" src="js/touchr.js"&gt;&lt;/script&gt;</code></p>
+        <p><code>&lt;script type="text/javascript" src="js/touchr.js"&gt;&lt;/script&gt;</code></p>
 
-<h2>Interaction:</h2>
+        <h2>Interaction:</h2>
 
-<p><code>element.addEventListener("touchstart", function(e){console.log(e)});</code></p>
+        <p><code>element.addEventListener("touchstart", function(e){console.log(e)});</code></p>
 
-<h2>Licence:</h2>
+        <h2>Licence:</h2>
 
-<p>Touchr is distributed under terms of MIT licence.</p>
+        <p>Touchr is distributed under terms of MIT licence.</p>
+
+        <h2 style="display:none;">Demo:</h2>
+
+
+        <canvas id="canvas" style="width: 500px; height: 500px; border: 1px solid lightgray; display: none;"></canvas>
+        <script>
+            function getWindowRelativeOffset(parentWindow, elem) {
+                var offset = {
+                    left : 0,
+                    top : 0
+                };
+                // relative to the target field's document
+                offset.left = elem.getBoundingClientRect().left;
+                offset.top = elem.getBoundingClientRect().top;
+                // now we will calculate according to the current document, this current
+                // document might be same as the document of target field or it may be
+                // parent of the document of the target field
+                var childWindow = elem.ownerDocument.defaultView;
+                while (childWindow != parentWindow) {
+                    offset.left = offset.left + childWindow.frameElement.getBoundingClientRect().left;
+                    offset.top = offset.top + childWindow.frameElement.getBoundingClientRect().top;
+                    childWindow = childWindow.parent;
+                }
+
+                return offset;
+            };
+
+            function viewportOffset(forElement) {
+            	var valueT = 0, valueL = 0;
+            	var element = forElement;
+            	do {
+            		valueT += element.offsetTop  || 0;
+            		valueL += element.offsetLeft || 0;
+            		if (element.offsetParent == document.body) break;
+            	} while (element = element.offsetParent);
+            	element = forElement;
+            	do {
+            		if (element.tagName == 'BODY') {
+            			valueT -= element.scrollTop  || 0;
+            			valueL -= element.scrollLeft || 0;
+            		}
+            	} while (element = element.parentNode);
+            	return {left:valueL, top:valueT};
+            }
+
+            var obj = document.getElementById('canvas'),
+                ctx = obj.getContext("2d"),
+                start = {left: 0, top: 0};
+            ctx.strokeStyle = "#000000";
+            ctx.fillStyle = "#FF00000";
+            ctx.lineWidth = 1;
+
+            obj.addEventListener("touchstart", function(event){
+                var touch = event.touches[0];
+                var offset = viewportOffset(obj);
+                ctx.beginPath();
+                ctx.moveTo((start.left = touch.pageX) - offset.left, (start.top = touch.pageY) - offset.top);
+            });
+
+
+            obj.addEventListener('touchmove', function(event) {
+                var touch = event.touches[0];
+                var offset = viewportOffset(obj);
+                ctx.lineTo(start.left - touch.pageX, start.top - touch.pageY);
+                ctx.stroke();
+            });
+
+            obj.addEventListener('touchend', function(event) {
+                ctx.closePath();
+            });
+        </script>
+
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/aichi">aichi</a></p>
