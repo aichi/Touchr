@@ -12,6 +12,8 @@
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
     <script src="./javascripts/touchr.js"></script>
+    <link rel="stylesheet" href="http://yandex.st/highlightjs/7.3/styles/default.min.css">
+    <script src="http://yandex.st/highlightjs/7.3/highlight.min.js"></script>
   </head>
   <body>
     <div class="wrapper">
@@ -45,77 +47,85 @@
 
         <p>Touchr is distributed under terms of MIT licence.</p>
 
-        <h2 style="display:none;">Demo:</h2>
+        <h2>Demo:</h2>
 
 
-        <canvas id="canvas" style="width: 500px; height: 500px; border: 1px solid lightgray; display: none;"></canvas>
+        <canvas id="canvas" style="width: 500px; height: 500px; border: 1px solid lightgray; xdisplay: none;"></canvas>
         <script>
-            function getWindowRelativeOffset(parentWindow, elem) {
-                var offset = {
-                    left : 0,
-                    top : 0
-                };
-                // relative to the target field's document
-                offset.left = elem.getBoundingClientRect().left;
-                offset.top = elem.getBoundingClientRect().top;
-                // now we will calculate according to the current document, this current
-                // document might be same as the document of target field or it may be
-                // parent of the document of the target field
-                var childWindow = elem.ownerDocument.defaultView;
-                while (childWindow != parentWindow) {
-                    offset.left = offset.left + childWindow.frameElement.getBoundingClientRect().left;
-                    offset.top = offset.top + childWindow.frameElement.getBoundingClientRect().top;
-                    childWindow = childWindow.parent;
-                }
-
-                return offset;
-            };
-
             function viewportOffset(forElement) {
-            	var valueT = 0, valueL = 0;
-            	var element = forElement;
-            	do {
-            		valueT += element.offsetTop  || 0;
-            		valueL += element.offsetLeft || 0;
-            		if (element.offsetParent == document.body) break;
-            	} while (element = element.offsetParent);
-            	element = forElement;
-            	do {
-            		if (element.tagName == 'BODY') {
-            			valueT -= element.scrollTop  || 0;
-            			valueL -= element.scrollLeft || 0;
-            		}
-            	} while (element = element.parentNode);
-            	return {left:valueL, top:valueT};
+            	var value = forElement.getBoundingClientRect();
+            	return {left: value.left, top: value.top};
             }
 
             var obj = document.getElementById('canvas'),
                 ctx = obj.getContext("2d"),
-                start = {left: 0, top: 0};
-            ctx.strokeStyle = "#000000";
-            ctx.fillStyle = "#FF00000";
-            ctx.lineWidth = 1;
+                touched = false;
+            obj.width = obj.height = 500;
+            ctx.fillStyle = "#FF0000";
 
             obj.addEventListener("touchstart", function(event){
                 var touch = event.touches[0];
-                var offset = viewportOffset(obj);
-                ctx.beginPath();
-                ctx.moveTo((start.left = touch.pageX) - offset.left, (start.top = touch.pageY) - offset.top);
+                if (touch) {
+                    touched = true;
+                }
             });
-
 
             obj.addEventListener('touchmove', function(event) {
                 var touch = event.touches[0];
                 var offset = viewportOffset(obj);
-                ctx.lineTo(start.left - touch.pageX, start.top - touch.pageY);
-                ctx.stroke();
+                if (touched) {
+                    var x = touch.clientX - offset.left,
+                        y = touch.clientY - offset.top;
+                    ctx.fillRect(x - 1, y - 1, 2, 2);
+                }
             });
 
             obj.addEventListener('touchend', function(event) {
-                ctx.closePath();
+                touched = false;
             });
         </script>
 
+          <h2>Sample code:</h2>
+
+          <pre><code>
+&lt;canvas id="canvas"
+    style="width: 500px; height: 500px; border: 1px solid gray;">
+&lt;/canvas>
+&lt;script>
+  function viewportOffset(forElement) {
+    var value = forElement.getBoundingClientRect();
+    return {left: value.left, top: value.top};
+  }
+
+  var obj = document.getElementById('canvas'),
+      ctx = obj.getContext("2d"),
+      touched = false;
+  obj.width = obj.height = 500;
+  ctx.fillStyle = "#FF0000";
+
+  obj.addEventListener("touchstart", function(event){
+      var touch = event.touches[0];
+      if (touch) {
+          touched = true;
+      }
+  });
+
+  obj.addEventListener('touchmove', function(event) {
+      var touch = event.touches[0];
+      var offset = viewportOffset(obj);
+      if (touched) {
+          var x = touch.clientX - offset.left,
+              y = touch.clientY - offset.top;
+          ctx.fillRect(x - 1, y - 1, 2, 2);
+      }
+  });
+
+  obj.addEventListener('touchend', function(event) {
+      touched = false;
+  });
+&lt;/script>
+          </code></pre>
+          <script>hljs.initHighlightingOnLoad();</script>
       </section>
       <footer>
         <p>This project is maintained by <a href="https://github.com/aichi">aichi</a></p>
