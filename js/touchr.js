@@ -14,6 +14,7 @@
 			GESTURE_CHANGE	= "MSGestureChange",
 			GESTURE_END		= "MSGestureEnd",
 			TOUCH_ACTION	= IE_11_PLUS ? "touchAction" : "msTouchAction",
+			_180_OVER_PI	= 180/Math.PI,
 			createEvent = function (eventName, target, params) {
 				var k,
 					event = document.createEvent("Event");
@@ -214,6 +215,9 @@
 			 */
 			gesture = window.MSGesture ? new MSGesture() : null,
 
+			gestureScale = 1,
+			gestureRotation = 0,
+
 			/**
 			 * Storage of targets and anonymous MSPointerStart handlers for later
 			 * unregistering
@@ -315,12 +319,31 @@
 			 */
 			gestureListener = function (evt) {
 				//TODO: check first, other than IE (FF?), browser which implements pointer events how to make gestures from pointers. Maybe it would be mix of pointer/gesture events.
-				var type;
+				var type, scale, rotation;
 				if (evt.type === GESTURE_START) {type = "gesturestart"}
 				else if (evt.type === GESTURE_CHANGE) {type = "gesturechange"}
 				else if (evt.type === GESTURE_END) {type = "gestureend"}
 
-				createEvent(type, evt.target, {scale: evt.scale, rotation: evt.rotation, screenX: evt.screenX, screenY: evt.screenY});
+				// -------- SCALE ---------
+				//MSGesture:
+				//Scale values represent the difference in scale from the last MSGestureEvent that was fired.
+				//Apple:
+				//The distance between two fingers since the start of an event, as a multiplier of the initial distance. The initial value is 1.0.
+
+				// ------- ROTATION -------
+				//MSGesture:
+				//Clockwise rotation of the cursor around its own major axis expressed as a value in radians from the last MSGestureEvent of the interaction.
+				//Apple:
+				//The delta rotation since the start of an event, in degrees, where clockwise is positive and counter-clockwise is negative. The initial value is 0.0
+				if (evt.type === GESTURE_START) {
+					scale = gestureScale = 1;
+					rotation = gestureRotation = 0;
+				} else {
+					scale = gestureScale = gestureScale + (evt.scale - 1); //* evt.scale;
+					rotation = gestureRotation = gestureRotation + evt.rotation * _180_OVER_PI;
+				}
+
+				createEvent(type, evt.target, {scale: scale, rotation: rotation, screenX: evt.screenX, screenY: evt.screenY});
 			},
 
 			/**
