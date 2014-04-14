@@ -360,12 +360,16 @@
 
 				elementClass.prototype.addEventListener = function(type, listener, useCapture) {
 					//"this" is HTML element
-					customAddEventListener.call(this, type, listener, useCapture);
+					if ((type.indexOf("gesture") === 0 || type.indexOf("touch") === 0)) {
+						customAddEventListener.call(this, type, listener, useCapture);
+					}
 					oldAddEventListener.call(this, type, listener, useCapture);
 				};
 
 				elementClass.prototype.removeEventListener = function(type, listener, useCapture) {
-					customRemoveEventListener.call(this, type, listener, useCapture);
+					if ((type.indexOf("gesture") === 0 || type.indexOf("touch") === 0)) {
+						customRemoveEventListener.call(this, type, listener, useCapture);
+					}
 					oldRemoveEventListener.call(this, type, listener, useCapture);
 				};
 			},
@@ -377,36 +381,24 @@
 			 * @param {Boolean} useCapture
 			 */
 			attachTouchEvents = function (type, listener, useCapture) {
-				var that = this,
-					func;
+				//element owner document or document itself
+				var doc = this.nodeType == 9 ?  this : this.ownerDocument;
 
-				if (type.indexOf("touchstart") === 0) {
-					func = function() {
-						if (checkSameTarget(that, arguments[0].target)) {
-							pointerListener.apply(this, arguments);
-						}
-					};
-					attachedPointerStartMethods.push({node: this, func: func});
-					this.ownerDocument.addEventListener(POINTER_DOWN, func, useCapture);
-				}
-				if (type.indexOf("touchmove") === 0) {
-					this.ownerDocument.addEventListener(POINTER_MOVE, pointerListener, useCapture);
-				}
-				if (type.indexOf("touchend") === 0) {
-					this.ownerDocument.addEventListener(POINTER_UP, pointerListener, useCapture);
-				}
-				if (type.indexOf("gesturestart") === 0) {
-					this.ownerDocument.addEventListener(GESTURE_START, gestureListener, useCapture);
-				}
-				if (type.indexOf("gesturechange") === 0) {
-					this.ownerDocument.addEventListener(GESTURE_CHANGE, gestureListener, useCapture);
-				}
-				if (type.indexOf("gestureend") === 0) {
-					this.ownerDocument.addEventListener(GESTURE_END, gestureListener, useCapture);
+				// Because we are listening only on document, it is not necessary to
+				// attach events on one document more times
+				if (attachedPointerStartMethods.indexOf(doc) < 0) {
+					//TODO: reference on node, listen on DOM removal to clean the ref?
+					attachedPointerStartMethods.push(doc);
+					doc.addEventListener(POINTER_DOWN, pointerListener, useCapture);
+					doc.addEventListener(POINTER_MOVE, pointerListener, useCapture);
+					doc.addEventListener(POINTER_UP, pointerListener, useCapture);
+					doc.addEventListener(GESTURE_START, gestureListener, useCapture);
+					doc.addEventListener(GESTURE_CHANGE, gestureListener, useCapture);
+					doc.addEventListener(GESTURE_END, gestureListener, useCapture);
 				}
 
 				// e.g. Document has no style
-				if (this.style && typeof this.style[TOUCH_ACTION] != "undefined") {
+				if (this.style && (typeof this.style[TOUCH_ACTION] == "undefined" || !this.style[TOUCH_ACTION])) {
 					this.style[TOUCH_ACTION] = "none";
 				}
 			},
@@ -418,34 +410,7 @@
 			 * @param {Boolean} useCapture
 			 */
 			removeTouchEvents = function (type, listener, useCapture) {
-				var func,
-					i;
-				//stores this,type,listener, to know what to call in pointerListener
-				if (type.indexOf("touchstart") === 0) {
-					i = attachedPointerStartMethods.length;
-					while(i--) {
-						if (attachedPointerStartMethods[i].node === this) {
-							this.ownerDocument.removeEventListener(POINTER_DOWN, func, useCapture);
-							attachedPointerStartMethods.splice(i, 1);
-							break;
-						}
-					}
-				}
-				if (type.indexOf("touchmove") === 0) {
-					this.ownerDocument.removeEventListener(POINTER_MOVE, pointerListener, useCapture);
-				}
-				if (type.indexOf("touchend") === 0) {
-					this.ownerDocument.removeEventListener(POINTER_UP, pointerListener, useCapture);
-				}
-				if (type.indexOf("gesturestart") === 0) {
-					this.ownerDocument.removeEventListener(GESTURE_START, gestureListener, useCapture);
-				}
-				if (type.indexOf("gesturechange") === 0) {
-					this.ownerDocument.removeEventListener(GESTURE_CHANGE, gestureListener, useCapture);
-				}
-				if (type.indexOf("gestureend") === 0) {
-					this.ownerDocument.removeEventListener(GESTURE_END, gestureListener, useCapture);
-				}
+				//todo: are we able to understand when all listeners are unregistered and shall be removed?
 			};
 
 
