@@ -14,6 +14,7 @@
 			GESTURE_CHANGE	= "MSGestureChange",
 			GESTURE_END		= "MSGestureEnd",
 			TOUCH_ACTION	= IE_11_PLUS ? "touchAction" : "msTouchAction",
+			_180_OVER_PI	= 180/Math.PI,
 			createEvent = function (eventName, target, params) {
 				var k,
 					event = document.createEvent("Event");
@@ -214,6 +215,9 @@
 			 */
 			gesture = window.MSGesture ? new MSGesture() : null,
 
+			gestureScale = 1,
+			gestureRotation = 0,
+
 			/**
 			 * Storage of targets and anonymous MSPointerStart handlers for later
 			 * unregistering
@@ -315,12 +319,31 @@
 			 */
 			gestureListener = function (evt) {
 				//TODO: check first, other than IE (FF?), browser which implements pointer events how to make gestures from pointers. Maybe it would be mix of pointer/gesture events.
-				var type;
+				var type, scale, rotation;
 				if (evt.type === GESTURE_START) {type = "gesturestart"}
 				else if (evt.type === GESTURE_CHANGE) {type = "gesturechange"}
 				else if (evt.type === GESTURE_END) {type = "gestureend"}
 
-				createEvent(type, evt.target, {scale: evt.scale, rotation: evt.rotation, screenX: evt.screenX, screenY: evt.screenY});
+				// -------- SCALE ---------
+				//MSGesture:
+				//Scale values represent the difference in scale from the last MSGestureEvent that was fired.
+				//Apple:
+				//The distance between two fingers since the start of an event, as a multiplier of the initial distance. The initial value is 1.0.
+
+				// ------- ROTATION -------
+				//MSGesture:
+				//Clockwise rotation of the cursor around its own major axis expressed as a value in radians from the last MSGestureEvent of the interaction.
+				//Apple:
+				//The delta rotation since the start of an event, in degrees, where clockwise is positive and counter-clockwise is negative. The initial value is 0.0
+				if (evt.type === GESTURE_START) {
+					scale = gestureScale = 1;
+					rotation = gestureRotation = 0;
+				} else {
+					scale = gestureScale = gestureScale + (evt.scale - 1); //* evt.scale;
+					rotation = gestureRotation = gestureRotation + evt.rotation * _180_OVER_PI;
+				}
+
+				createEvent(type, evt.target, {scale: scale, rotation: rotation, screenX: evt.screenX, screenY: evt.screenY});
 			},
 
 			/**
@@ -337,12 +360,16 @@
 
 				elementClass.prototype.addEventListener = function(type, listener, useCapture) {
 					//"this" is HTML element
-					customAddEventListener.call(this, type, listener, useCapture);
+					if ((type.indexOf("gesture") === 0 || type.indexOf("touch") === 0)) {
+						customAddEventListener.call(this, type, listener, useCapture);
+					}
 					oldAddEventListener.call(this, type, listener, useCapture);
 				};
 
 				elementClass.prototype.removeEventListener = function(type, listener, useCapture) {
-					customRemoveEventListener.call(this, type, listener, useCapture);
+					if ((type.indexOf("gesture") === 0 || type.indexOf("touch") === 0)) {
+						customRemoveEventListener.call(this, type, listener, useCapture);
+					}
 					oldRemoveEventListener.call(this, type, listener, useCapture);
 				};
 			},
@@ -354,36 +381,24 @@
 			 * @param {Boolean} useCapture
 			 */
 			attachTouchEvents = function (type, listener, useCapture) {
-				var that = this,
-					func;
+				//element owner document or document itself
+				var doc = this.nodeType == 9 ?  this : this.ownerDocument;
 
-				if (type.indexOf("touchstart") === 0) {
-					func = function() {
-						if (checkSameTarget(that, arguments[0].target)) {
-							pointerListener.apply(this, arguments);
-						}
-					};
-					attachedPointerStartMethods.push({node: this, func: func});
-					this.ownerDocument.addEventListener(POINTER_DOWN, func, useCapture);
-				}
-				if (type.indexOf("touchmove") === 0) {
-					this.ownerDocument.addEventListener(POINTER_MOVE, pointerListener, useCapture);
-				}
-				if (type.indexOf("touchend") === 0) {
-					this.ownerDocument.addEventListener(POINTER_UP, pointerListener, useCapture);
-				}
-				if (type.indexOf("gesturestart") === 0) {
-					this.ownerDocument.addEventListener(GESTURE_START, gestureListener, useCapture);
-				}
-				if (type.indexOf("gesturechange") === 0) {
-					this.ownerDocument.addEventListener(GESTURE_CHANGE, gestureListener, useCapture);
-				}
-				if (type.indexOf("gestureend") === 0) {
-					this.ownerDocument.addEventListener(GESTURE_END, gestureListener, useCapture);
+				// Because we are listening only on document, it is not necessary to
+				// attach events on one document more times
+				if (attachedPointerStartMethods.indexOf(doc) < 0) {
+					//TODO: reference on node, listen on DOM removal to clean the ref?
+					attachedPointerStartMethods.push(doc);
+					doc.addEventListener(POINTER_DOWN, pointerListener, useCapture);
+					doc.addEventListener(POINTER_MOVE, pointerListener, useCapture);
+					doc.addEventListener(POINTER_UP, pointerListener, useCapture);
+					doc.addEventListener(GESTURE_START, gestureListener, useCapture);
+					doc.addEventListener(GESTURE_CHANGE, gestureListener, useCapture);
+					doc.addEventListener(GESTURE_END, gestureListener, useCapture);
 				}
 
 				// e.g. Document has no style
-				if (this.style && typeof this.style[TOUCH_ACTION] != "undefined") {
+				if (this.style && (typeof this.style[TOUCH_ACTION] == "undefined" || !this.style[TOUCH_ACTION])) {
 					this.style[TOUCH_ACTION] = "none";
 				}
 			},
@@ -395,34 +410,7 @@
 			 * @param {Boolean} useCapture
 			 */
 			removeTouchEvents = function (type, listener, useCapture) {
-				var func,
-					i;
-				//stores this,type,listener, to know what to call in pointerListener
-				if (type.indexOf("touchstart") === 0) {
-					i = attachedPointerStartMethods.length;
-					while(i--) {
-						if (attachedPointerStartMethods[i].node === this) {
-							this.ownerDocument.removeEventListener(POINTER_DOWN, func, useCapture);
-							attachedPointerStartMethods.splice(i, 1);
-							break;
-						}
-					}
-				}
-				if (type.indexOf("touchmove") === 0) {
-					this.ownerDocument.removeEventListener(POINTER_MOVE, pointerListener, useCapture);
-				}
-				if (type.indexOf("touchend") === 0) {
-					this.ownerDocument.removeEventListener(POINTER_UP, pointerListener, useCapture);
-				}
-				if (type.indexOf("gesturestart") === 0) {
-					this.ownerDocument.removeEventListener(GESTURE_START, gestureListener, useCapture);
-				}
-				if (type.indexOf("gesturechange") === 0) {
-					this.ownerDocument.removeEventListener(GESTURE_CHANGE, gestureListener, useCapture);
-				}
-				if (type.indexOf("gestureend") === 0) {
-					this.ownerDocument.removeEventListener(GESTURE_END, gestureListener, useCapture);
-				}
+				//todo: are we able to understand when all listeners are unregistered and shall be removed?
 			};
 
 
