@@ -143,6 +143,10 @@ strong {
   font-weight:700;
 }
 
+em {
+  font-weight:bold;
+}
+
 header ul li + li {
   width:88px;
   border-left:1px solid #fff;

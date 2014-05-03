@@ -1,3 +1,13 @@
+/*
+ * Internet explorer generates pointer events by default for all input types like mouse, pen or touch (finger).
+ * Touchr is generating touch events only for touch type by default but it can be overwritten by
+ * window.Touchr_ALLOWED_POINTER_TYPE bitmask property. It can have values:
+ * 1 for touch
+ * 2 for mouse
+ * 4 for pen
+ * and their combinations.
+ */
+
 (function(window) {
 	var IE_10		= !!window.navigator.msPointerEnabled,
 		// Check below can mark as IE11+ also other browsers which implements pointer events in future
@@ -7,14 +17,19 @@
 	// Only pointer enabled browsers without touch capability.
 	if (IE_10 || (IE_11_PLUS && !('ontouchstart' in window))) {
 		var document = window.document,
-			POINTER_DOWN	= IE_11_PLUS ? "pointerdown" : "MSPointerDown",
-			POINTER_UP 		= IE_11_PLUS ? "pointerup" : "MSPointerUp",
-			POINTER_MOVE	= IE_11_PLUS ? "pointermove" : "MSPointerMove",
-			GESTURE_START	= "MSGestureStart",
-			GESTURE_CHANGE	= "MSGestureChange",
-			GESTURE_END		= "MSGestureEnd",
-			TOUCH_ACTION	= IE_11_PLUS ? "touchAction" : "msTouchAction",
-			_180_OVER_PI	= 180/Math.PI,
+			POINTER_DOWN		= IE_11_PLUS ? "pointerdown"	: "MSPointerDown",
+			POINTER_UP 			= IE_11_PLUS ? "pointerup"		: "MSPointerUp",
+			POINTER_MOVE		= IE_11_PLUS ? "pointermove"	: "MSPointerMove",
+			POINTER_TYPE_TOUCH 	= IE_11_PLUS ? "touch"	: MSPointerEvent.MSPOINTER_TYPE_TOUCH,
+			POINTER_TYPE_MOUSE 	= IE_11_PLUS ? "mouse"	: MSPointerEvent.MSPOINTER_TYPE_MOUSE,
+			POINTER_TYPE_PEN 	= IE_11_PLUS ? "pen"	: MSPointerEvent.MSPOINTER_TYPE_PEN, //IE11+ has also unknown type which Touchr doesn't support
+			GESTURE_START		= "MSGestureStart",
+			GESTURE_CHANGE		= "MSGestureChange",
+			GESTURE_END			= "MSGestureEnd",
+			TOUCH_ACTION		= IE_11_PLUS ? "touchAction" : "msTouchAction",
+			_180_OVER_PI		= 180/Math.PI,
+			// Which pointer types will be used for generating touch events: 1 - touch, 2 - mouse, 4 - pen or their combination
+			ALLOWED_POINTER_TYPE = window.Touchr_ALLOWED_POINTER_TYPE || 1,
 			createEvent = function (eventName, target, params) {
 				var k,
 					event = document.createEvent("Event");
@@ -244,6 +259,21 @@
 			},
 
 			/**
+			 * Returns bitmask type of pointer to compare with allowed pointer types
+			 * @param {Number|String} pointerType
+			 * @returns {Number}
+			 */
+			pointerTypeToBitmask = function (pointerType) {
+				if (pointerType == POINTER_TYPE_TOUCH) {
+					return 1;
+				} else if (pointerType == POINTER_TYPE_MOUSE) {
+					return 2;
+				} else {
+					return 4;
+				}
+			},
+
+			/**
 			 * Main function which is rewriting the MSPointer event to touch event
 			 * and preparing all the necessary lists of touches.
 			 * @param {Event} evt
@@ -256,6 +286,11 @@
 					changedTouches,
 					targetTouches;
 
+				// Skip pointers which are not allowed by users:
+				if (!(pointerTypeToBitmask(evt.pointerType) & ALLOWED_POINTER_TYPE)) {
+					return;
+				}
+
 				if (evt.type === POINTER_DOWN) {
 					generalTouchesHolder._add(evt);
 					pointerToTarget[evt.pointerId] = evt.target;
@@ -267,7 +302,12 @@
 					if (generalTouchesHolder.length > 1) {
 						gesture.target = evt.target;
 						for (i = 0; i < generalTouchesHolder.length; i++) {
-							gesture.addPointer(generalTouchesHolder[i].pointerId);
+							// Adds to gesture only touches
+							// It is not necessary to create separate gesture for mouse or pen pointers
+							// because they cannot be present more than by 1 pointer.
+							if (generalTouchesHolder[i].pointerType === POINTER_TYPE_TOUCH) {
+								gesture.addPointer(generalTouchesHolder[i].pointerId);
+							}
 						}
 					}
 				}
@@ -307,7 +347,8 @@
 						gesture.stop();
 					}
 				}
-	//log("+", evt.type, generalTouchesHolder.length, evt.target.nodeName+"#"+evt.target.id);
+
+				//console.log("+", evt.type, evt.pointerType, generalTouchesHolder.length, evt.target.nodeName+"#"+evt.target.id);
 				if (type && originalTarget) {
 					createEvent(type, originalTarget, {touches: generalTouchesHolder, changedTouches: changedTouches, targetTouches: targetTouches});
 				}

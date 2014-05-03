@@ -19,7 +19,7 @@
     <div class="wrapper">
       <header>
         <h1>Touchr</h1>
-        <p>Mimics touch events for Internet Explorer 10+ browser</p>
+        <p>Mimics touch and gesture events for Internet Explorer 10+ browser</p>
 
         <p class="view"><a href="https://github.com/aichi/Touchr">View the Project on GitHub <small>aichi/Touchr</small></a></p>
 
@@ -33,7 +33,9 @@
       <section>
         <h1>Touchr</h1>
 
-        <p>The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible with new Internet Explorer 10+ pointer gestures. This package automatically mimics touch events in IE 10+ browser.</p>
+        <p>The core idea of Touchr is that many mobile web sites are prepared for touchable devices but are incompatible
+            with new Internet Explorer 10+ pointer gestures. This package automatically mimics touch and gesture events
+            in IE 10+ browser.</p>
 
         <h2>Usage:</h2>
 
@@ -42,6 +44,18 @@
         <h2>Interaction:</h2>
 
         <p><code>element.addEventListener("touchstart", function(e){console.log(e)});</code></p>
+
+        <h2>Fine tuning:</h2>
+
+        <p>Touchr by default convert to touch events only pointer events with
+            <a href="http://msdn.microsoft.com/en-us/library/windows/apps/hh466130.aspx">touch</a> type. That behavior
+            can be overwritten setting bitmask property <em>window.Touchr_ALLOWED_POINTER_TYPE</em> before
+            script tag which loads touchr.js. Available values are:</p>
+        <ul>
+            <li>1: touch (default setting)</li>
+            <li>2: mouse</li>
+            <li>4: pen</li>
+        </ul>
 
         <h2>Licence:</h2>
 
