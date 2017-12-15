@@ -12,7 +12,8 @@
 	var IE_10		= !!window.navigator.msPointerEnabled,
 		// Check below can mark as IE11+ also other browsers which implements pointer events in future
 		// that is not issue, because touch capability is tested in IF statement bellow.
-		IE_11_PLUS	= !!window.navigator.pointerEnabled;
+		// Note since Edge 16/Windows 10 1709 the property 'window.navigator.pointerEnabled' is undefined.
+		IE_11_PLUS	= !!window.navigator.pointerEnabled || !!window.PointerEvent;
 
 	// Only pointer enabled browsers without touch capability.
 	if (IE_10 || (IE_11_PLUS && !('ontouchstart' in window))) {
