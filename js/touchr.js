@@ -300,7 +300,7 @@
 
 					// Fires MSGesture event when we have at least two pointers in our holder
 					// (adding pointers to gesture object immediately fires Gesture event)
-					if (generalTouchesHolder.length > 1) {
+					if (gesture && generalTouchesHolder.length > 1) {
 						gesture.target = evt.target;
 						for (i = 0; i < generalTouchesHolder.length; i++) {
 							// Adds to gesture only touches
@@ -344,7 +344,7 @@
 					type = "touchend";
 
 					// Fires MSGestureEnd event when there is only one ore zero touches:
-					if (generalTouchesHolder.length <= 1) {
+					if (gesture && generalTouchesHolder.length <= 1) {
 						gesture.stop();
 					}
 				}
@@ -440,8 +440,115 @@
 				}
 
 				// e.g. Document has no style
-				if (this.style && (typeof this.style[TOUCH_ACTION] == "undefined" || !this.style[TOUCH_ACTION])) {
+				// only touchmove event requires touch-action:none, don't set it unless it's neccessary
+				// as it affects native behavior such as scrolling with pan gesture
+				if (type === "touchmove" && this.style && (typeof this.style[TOUCH_ACTION] == "undefined" || !this.style[TOUCH_ACTION])) {
 					this.style[TOUCH_ACTION] = "none";
+					// handle scrolling
+					// if the element is draggable, don't scroll
+					if (!this.hasAttribute("draggable")) {
+						attachScrollHandler(this);
+					}
+				}
+			},
+			/**
+			 * This method attach the scroll event handler.
+			 * @param {Element} elem 
+			 */
+			attachScrollHandler = function(elem) {
+				var last, scrollElem, findClosestScrollableElement, pointerDownHandler, pointerMoveHandler, pointerUpHandler;
+
+				/**
+				 * Find the closest scrollable element from and including target
+				 * @param {Element} target
+				 * @return {Element}
+				 */
+				findClosestScrollableElement = function(target) {
+					var clientHeight, scrollHeight;
+
+					if (target == null) {
+						return null;
+					}
+
+					clientHeight = target.clientHeight;
+					scrollHeight = target.scrollHeight;
+					if (!isNaN(clientHeight) && !isNaN(scrollHeight) && Math.abs(scrollHeight - clientHeight) > 1) {
+						return target == document.documentElement ? document.body : target;
+					}
+					else {
+						if (elem != target) {
+							return findClosestScrollableElement(target.parentNode);
+						}
+						return null;
+					}
+				};
+
+				/**
+				 * Handler for PointerDown event
+				 */
+				pointerDownHandler = function(event) {
+					if (event.pointerType === "touch") {
+						last = event.clientY;
+						scrollElem = findClosestScrollableElement(event.target);
+						if (scrollElem) {
+							// prevent ancestors that have pointer event handler installed
+							// to do any work
+							event.stopPropagation();
+						}
+					}					
+				};
+
+				/**
+				 * Handler for PointerMove event
+				 */
+				pointerMoveHandler = function(Event) {
+					var current, delta, nextScrollElem;
+
+					if (event.pointerType === "touch") {
+						if (last != undefined && scrollElem) {
+							current = scrollElem.scrollTop;
+							delta = last - event.clientY;
+							scrollElem.scrollTop = current + delta;	
+
+							// see if scroll min/max has been reached, scroll the next closest scrollable element
+							if (current == scrollElem.scrollTop) {
+								nextScrollElem = findClosestScrollableElement(scrollElem.parentNode);								
+								while (nextScrollElem) {
+									current = nextScrollElem.scrollTop;
+									nextScrollElem.scrollTop = current + delta;
+									if (nextScrollElem === document.body || nextScrollElem.scrollTop != current) {
+										break;
+									}
+									nextScrollElem = findClosestScrollableElement(nextScrollElem.parentNode);
+								}
+							}
+						}
+						last = event.clientY;
+					}
+				};
+
+				/**
+				 * Handler for PointerUp event
+				 */
+				pointerUpHandler = function(event) {
+					last = undefined;
+				};
+
+				elem.addEventListener(POINTER_DOWN, pointerDownHandler);
+				elem.addEventListener(POINTER_MOVE, pointerMoveHandler); 
+				elem.addEventListener(POINTER_UP, pointerUpHandler);
+				elem._pointerHandlers = [pointerDownHandler, pointerMoveHandler, pointerUpHandler];
+			},
+			/**
+			 * This method detach the scroll event handler.
+			 * @param {Element} elem 
+			 */
+			detachScrollHandler = function(elem) {
+				if (elem._pointerHandlers) {
+					elem.removeEventListener(POINTER_DOWN, elem._pointerHandlers[0]);
+					elem.removeEventListener(POINTER_MOVE, elem._pointerHandlers[1]);
+					elem.removeEventListener(POINTER_UP, elem._pointerHandlers[2]);
+					elem._pointerHandlers = undefined;
 				}
 			},
 			/**
@@ -453,6 +560,7 @@
 			 */
 			removeTouchEvents = function (type, listener, useCapture) {
 				//todo: are we able to understand when all listeners are unregistered and shall be removed?
+				detachScrollHandler(this);
 			};
 
 
