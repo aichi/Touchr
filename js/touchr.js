@@ -456,7 +456,7 @@
 			 * @param {Element} elem 
 			 */
 			attachScrollHandler = function(elem) {
-				var last, scrollElem, findClosestScrollableElement, pointerDownHandler, pointerMoveHandler, pointerUpHandler;
+				var last, scrollElem, findClosestScrollableElement, clearCachedHeight, visitedElems = [], pointerDownHandler, pointerMoveHandler, pointerUpHandler;
 
 				/**
 				 * Find the closest scrollable element from and including target
@@ -470,8 +470,18 @@
 						return null;
 					}
 
-					clientHeight = target.clientHeight;
-					scrollHeight = target.scrollHeight;
+					// use cached clientHeight and scrollHeight, to minimize layout/reflow
+					clientHeight = target._cachedClientHeight || target.clientHeight;
+					scrollHeight = target._cachedScrollHeight || target.scrollHeight;
+
+					target._cachedClientHeight = clientHeight;
+					target._cachedScrollHeight = scrollHeight;
+
+					// keep track of the elements visited so we could clear cached height later
+					if (visitedElems.indexOf(target) === -1) {
+						visitedElems.push(target);
+					}
+
 					if (!isNaN(clientHeight) && !isNaN(scrollHeight) && Math.abs(scrollHeight - clientHeight) > 1) {
 						return target == document.documentElement ? document.body : target;
 					}
@@ -484,10 +494,24 @@
 				};
 
 				/**
+				 * Clear cached clientHeight and scrollHeight from visited elements
+				 */
+				clearCachedHeight = function() {
+					for (var i=0; i<visitedElems.length; i++) {
+						visitedElems[i]._cachedClientHeight = null;
+						visitedElems[i]._cachedScrollHeight = null;
+					}
+					visitedElems.length = 0;
+				};
+
+				/**
 				 * Handler for PointerDown event
 				 */
 				pointerDownHandler = function(event) {
 					if (event.pointerType === "touch") {
+						// should have been clear 
+						clearCachedHeight();
+
 						last = event.clientY;
 						scrollElem = findClosestScrollableElement(event.target);
 						if (scrollElem) {
@@ -495,7 +519,7 @@
 							// to do any work
 							event.stopPropagation();
 						}
-					}					
+					}
 				};
 
 				/**
@@ -511,7 +535,8 @@
 							scrollElem.scrollTop = current + delta;	
 
 							// see if scroll min/max has been reached, scroll the next closest scrollable element
-							if (current == scrollElem.scrollTop) {
+							// ignore if delta is < 1 (subpixel case)
+							if (delta >= 1 && current == scrollElem.scrollTop) {
 								nextScrollElem = findClosestScrollableElement(scrollElem.parentNode);								
 								while (nextScrollElem) {
 									current = nextScrollElem.scrollTop;
@@ -531,6 +556,7 @@
 				 * Handler for PointerUp event
 				 */
 				pointerUpHandler = function(event) {
+					clearCachedHeight();
 					last = undefined;
 				};
 
