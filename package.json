@@ -2,7 +2,7 @@
   "name": "touchr",
   "title": "Touchr",
   "description": "JavaScript library to mimic touch events in Microsoft browsers.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "js/touchr.js",
   "homepage": "http://aichi.github.io/Touchr/",
   "author": {

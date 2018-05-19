@@ -21,6 +21,7 @@
 			POINTER_DOWN		= IE_11_PLUS ? "pointerdown"	: "MSPointerDown",
 			POINTER_UP 			= IE_11_PLUS ? "pointerup"		: "MSPointerUp",
 			POINTER_MOVE		= IE_11_PLUS ? "pointermove"	: "MSPointerMove",
+			POINTER_CANCEL		= IE_11_PLUS ? "pointercancel"	: "MSPointerCancel",
 			POINTER_TYPE_TOUCH 	= IE_11_PLUS ? "touch"	: MSPointerEvent.MSPOINTER_TYPE_TOUCH,
 			POINTER_TYPE_MOUSE 	= IE_11_PLUS ? "mouse"	: MSPointerEvent.MSPOINTER_TYPE_MOUSE,
 			POINTER_TYPE_PEN 	= IE_11_PLUS ? "pen"	: MSPointerEvent.MSPOINTER_TYPE_PEN, //IE11+ has also unknown type which Touchr doesn't support
@@ -336,7 +337,7 @@
 				}
 				originalTarget = pointerToTarget[evt.pointerId];
 
-				if (evt.type === POINTER_UP) {
+				if (evt.type === POINTER_UP || evt.type === POINTER_CANCEL) {
 					generalTouchesHolder._remove(evt);
 					pointerToTarget[evt.pointerId] = null;
 
@@ -434,6 +435,7 @@
 					doc.addEventListener(POINTER_DOWN, pointerListener, useCapture);
 					doc.addEventListener(POINTER_MOVE, pointerListener, useCapture);
 					doc.addEventListener(POINTER_UP, pointerListener, useCapture);
+					doc.addEventListener(POINTER_CANCEL, pointerListener, useCapture);
 					doc.addEventListener(GESTURE_START, gestureListener, useCapture);
 					doc.addEventListener(GESTURE_CHANGE, gestureListener, useCapture);
 					doc.addEventListener(GESTURE_END, gestureListener, useCapture);
