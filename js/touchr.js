@@ -13,7 +13,7 @@
 		// Check below can mark as IE11+ also other browsers which implements pointer events in future
 		// that is not issue, because touch capability is tested in IF statement bellow.
 		// Note since Edge 16/Windows 10 1709 the property 'window.navigator.pointerEnabled' is undefined.
-		IE_11_PLUS	= !!window.navigator.pointerEnabled || !!window.PointerEvent;
+		IE_11_PLUS	= !!window.navigator.maxTouchPoints > 0 && (!!window.navigator.pointerEnabled || !!window.PointerEvent);
 
 	// Only pointer enabled browsers without touch capability.
 	if (IE_10 || (IE_11_PLUS && !('ontouchstart' in window))) {
@@ -21,6 +21,7 @@
 			POINTER_DOWN		= IE_11_PLUS ? "pointerdown"	: "MSPointerDown",
 			POINTER_UP 			= IE_11_PLUS ? "pointerup"		: "MSPointerUp",
 			POINTER_MOVE		= IE_11_PLUS ? "pointermove"	: "MSPointerMove",
+			POINTER_CANCEL		= IE_11_PLUS ? "pointercancel"	: "MSPointerCancel",
 			POINTER_TYPE_TOUCH 	= IE_11_PLUS ? "touch"	: MSPointerEvent.MSPOINTER_TYPE_TOUCH,
 			POINTER_TYPE_MOUSE 	= IE_11_PLUS ? "mouse"	: MSPointerEvent.MSPOINTER_TYPE_MOUSE,
 			POINTER_TYPE_PEN 	= IE_11_PLUS ? "pen"	: MSPointerEvent.MSPOINTER_TYPE_PEN, //IE11+ has also unknown type which Touchr doesn't support
@@ -336,7 +337,7 @@
 				}
 				originalTarget = pointerToTarget[evt.pointerId];
 
-				if (evt.type === POINTER_UP) {
+				if (evt.type === POINTER_UP || evt.type === POINTER_CANCEL) {
 					generalTouchesHolder._remove(evt);
 					pointerToTarget[evt.pointerId] = null;
 
@@ -434,6 +435,7 @@
 					doc.addEventListener(POINTER_DOWN, pointerListener, useCapture);
 					doc.addEventListener(POINTER_MOVE, pointerListener, useCapture);
 					doc.addEventListener(POINTER_UP, pointerListener, useCapture);
+					doc.addEventListener(POINTER_CANCEL, pointerListener, useCapture);
 					doc.addEventListener(GESTURE_START, gestureListener, useCapture);
 					doc.addEventListener(GESTURE_CHANGE, gestureListener, useCapture);
 					doc.addEventListener(GESTURE_END, gestureListener, useCapture);
@@ -443,6 +445,7 @@
 				// only touchmove event requires touch-action:none, don't set it unless it's neccessary
 				// as it affects native behavior such as scrolling with pan gesture
 				if (type === "touchmove" && this.style && (typeof this.style[TOUCH_ACTION] == "undefined" || !this.style[TOUCH_ACTION])) {
+					this._touchActionUpdated = true;
 					this.style[TOUCH_ACTION] = "none";
 					// handle scrolling
 					// if the element is draggable, don't scroll
@@ -586,7 +589,12 @@
 			 */
 			removeTouchEvents = function (type, listener, useCapture) {
 				//todo: are we able to understand when all listeners are unregistered and shall be removed?
-				detachScrollHandler(this);
+				if (type === "touchmove") {
+					if (this._touchActionUpdated) {
+						delete this.style[TOUCH_ACTION];
+					}
+					detachScrollHandler(this);
+				}
 			};
 
 
